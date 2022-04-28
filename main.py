@@ -9,12 +9,10 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver import Keys
 
 
-house = "https://www.ilga.gov/house/"
-senate = "https://www.ilga.gov/senate/"
 
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
 def get_data(url, side):
+    print(f"getting data for {side}")
     driver.get(url)
     spans = driver.find_elements(By.XPATH, "//table//span")
     for span in spans:
@@ -42,32 +40,53 @@ def get_data(url, side):
         })
     return data
 
-house_data = get_data(house, "House")
-senate_data = get_data(senate, "Senate")
 
-os.makedirs("house", exist_ok=True)
-for record in house_data:
-    driver.get(record['page_link'])
-    src = driver.find_element(By.CSS_SELECTOR, '[alt*="Photograph"]').get_attribute("src")
-    fn = record.get('name').replace(' ', '-').replace('.', '').replace(',', '').lower()
-    urllib.request.urlretrieve(src, f"house/{fn}.jpg")
-    record['image_url'] = src
-    record['saved_image'] = f"house/{fn}.jpg"
+# os.makedirs("house", exist_ok=True)
 
-os.makedirs("senate", exist_ok=True)
-for record in senate_data:
-    driver.get(record['page_link'])
-    src = driver.find_element(By.CSS_SELECTOR, '[alt*="Photograph"]').get_attribute("src")
-    fn = record.get('name').replace(' ', '-').replace('.', '').replace(',', '').lower()
-    urllib.request.urlretrieve(src, f"senate/{fn}.jpg")
-    record['image_url'] = src
-    record['saved_image'] = f"senate/{fn}.jpg"
+def get_images(side, data):
+    print(f"downloading images for {side}")
+    os.makedirs("house", exist_ok=True)
+    for record in data:
+        driver.get(record['page_link'])
+        src = driver.find_element(By.CSS_SELECTOR, '[alt*="Photograph"]').get_attribute("src")
+        fn = record.get('name').replace(' ', '-').replace('.', '').replace(',', '').lower()
+        urllib.request.urlretrieve(src, f"{side}/{fn}.jpg")
+        record['image_url'] = src
+        record['saved_image'] = f"{side}/{fn}.jpg"
+
+
+#
+# os.makedirs("senate", exist_ok=True)
+# for record in senate_data:
+#     driver.get(record['page_link'])
+#     src = driver.find_element(By.CSS_SELECTOR, '[alt*="Photograph"]').get_attribute("src")
+#     fn = record.get('name').replace(' ', '-').replace('.', '').replace(',', '').lower()
+#     urllib.request.urlretrieve(src, f"senate/{fn}.jpg")
+#     record['image_url'] = src
+#     record['saved_image'] = f"senate/{fn}.jpg"
 
 # write the data
-with open("output.csv", "w") as f:
-    writer = csv.DictWriter(f, fieldnames=senate_data[0].keys())
-    writer.writeheader()
-    for row in senate_data:
-        writer.writerow(row)
-    for row in house_data:
-        writer.writerow(row)
+def write_data(datasets: list, fn="output.csv") -> None:
+    print(f"writing data to {fn}")
+    with open(fn, "w") as f:
+        writer = csv.DictWriter(f, fieldnames=senate_data[0].keys())
+        writer.writeheader()
+        for data in datasets:
+            for row in data:
+                writer.writerow(row)
+
+
+if __name__ == '__main__':
+    house = "https://www.ilga.gov/house/"
+    senate = "https://www.ilga.gov/senate/"
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+
+    house_data = get_data(house, "House")
+    senate_data = get_data(senate, "Senate")
+
+    get_images("house", house_data)
+    get_images("senate", senate_data)
+
+    write_data([house_data, senate_data])
+    driver.quit()
