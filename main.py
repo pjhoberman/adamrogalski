@@ -1,7 +1,9 @@
 import csv
 import os
+import shutil
 import urllib.request
 
+from PIL import Image
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -25,9 +27,14 @@ def get_data(url, side):
     # this takes about 10-15 seconds
     for row in rows[2:]:  # skip first two
         name, bills, committees, district, party = row.find_elements(By.TAG_NAME, 'td')
-        title = ''
-        if len(driver.find_elements(By.XPATH, "//*[(text()='District')]/following-sibling::span")):
-            title = driver.find_element(By.XPATH, "//*[(text()='District')]/following-sibling::span").text
+
+        # name.find_element(By.TAG_NAME, 'a').click()
+        # title = ''
+        # print(len(driver.find_elements(By.XPATH, "//*[text()[contains(.,'District')]]/following-sibling::span")))
+        # if len(driver.find_elements(By.XPATH, "//*[(text()='District')]/following-sibling::span")):
+        #     title = driver.find_element(By.XPATH, "//*[(text()='District')]/following-sibling::span").text
+        #     print(title)
+
         data.append({
             "side": side,
             "name": name.text,
@@ -36,8 +43,15 @@ def get_data(url, side):
             "committees": committees.find_element(By.TAG_NAME, 'a').get_attribute('href'),
             "district": district.text,
             "party": party.text,
-            "title": title,
+            # "title": title,
         })
+    for i, row in enumerate(rows[2:]):
+        driver.get(data[i]['page_link'])
+        title = ''
+        if len(driver.find_elements(By.XPATH, "//*[(text()='District')]/following-sibling::span")):
+            title = driver.find_element(By.XPATH, "//*[(text()='District')]/following-sibling::span").text
+        data[i]['title'] = title
+
     return data
 
 
@@ -53,6 +67,19 @@ def get_images(side, data):
         urllib.request.urlretrieve(src, f"{side}/{fn}.jpg")
         record['image_url'] = src
         record['saved_image'] = f"{side}/{fn}.jpg"
+
+        # downsize images
+        if os.stat(f"{side}/{fn}.jpg").st_size / 1000 > 300:  # over 300k
+            size = os.stat(f"{side}/{fn}.jpg").st_size / 1000
+            shutil.copyfile(f"{side}/{fn}.jpg", f"{side}/{fn}.original.jpg")
+            img = Image.open(f"{side}/{fn}.jpg")
+            if size > 1000:
+                quality = 33
+            elif size > 500:
+                quality = 50
+            elif size > 300:
+                quality = 75
+            img.save(f"{side}/{fn}.jpg", quality=quality)
 
 
 #
@@ -88,5 +115,5 @@ if __name__ == '__main__':
     get_images("house", house_data)
     get_images("senate", senate_data)
 
-    write_data([house_data, senate_data])
+    write_data([house_data, senate_data], fn="output.csv")
     driver.quit()
