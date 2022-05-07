@@ -10,6 +10,8 @@ import os
 # todo
 #  - cut lines between cards
 #  - extra long strings
+#  - fonts
+
 
 def make_ordinal(n):
     """
@@ -27,6 +29,7 @@ def make_ordinal(n):
     else:
         suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
     return str(n) + suffix
+
 
 
 def draw():
@@ -110,17 +113,104 @@ def draw():
                 except StopIteration:
                     canvas.save()
                     return
-                print(person)
+                # print(person)
                 starting_coords[1] = y_margin + (card_height + y_card_buffer) * j + y_card_buffer/2
-                print(starting_coords)
-                canvas.rect(*starting_coords, card_width, card_height, stroke=1)
-                canvas.drawString(starting_coords[0] + card_width/2, starting_coords[1] + card_height/2, "1")
+                # print(starting_coords)
+                # canvas.rect(*starting_coords, card_width, card_height, stroke=1)
+                # canvas.drawString(starting_coords[0] + card_width/2, starting_coords[1] + card_height/2, "1")
+
+                cut_lines = {
+                    0: {
+                        0: {0: "bottom left", 1: "-", 2: "+", 3: "|"},
+                        1: {1: "-", 2: "+"},
+                        2: {1: "-", 2: "+"},
+                        3: {1: "top left", 2: "|"},
+                    },
+                    2: {
+                        0: {0: "|", 1: "+", 2: "-", 3: "bottom right"},
+                        1: {1: "+", 2: "-"},
+                        2: {1: "+", 2: "-"},
+                        3: {1: "|", 2: "top right"},
+                    },
+                }
+
+                # cut lines
+                cuts = cut_lines.get(i, {}).get(j, {})
+                for position, cut in cuts.items():
+                    if cut == "bottom left":
+                        canvas.line(starting_coords[0], starting_coords[1], starting_coords[0] - 10, starting_coords[1])
+                        canvas.line(starting_coords[0], starting_coords[1], starting_coords[0], starting_coords[1]-10)
+                    elif cut == "top left":
+                        canvas.line(starting_coords[0], starting_coords[1] + card_height, starting_coords[0] - 10, starting_coords[1] + card_height)
+                        canvas.line(starting_coords[0], starting_coords[1] + card_height, starting_coords[0], starting_coords[1]+10 + card_height)
+                    elif cut == "top right":
+                        canvas.line(starting_coords[0] + card_width, starting_coords[1] + card_height, starting_coords[0] + card_width + 10, starting_coords[1] + card_height)
+                        canvas.line(starting_coords[0] + card_width, starting_coords[1] + card_height, starting_coords[0] + card_width, starting_coords[1]+10 + card_height)
+                    elif cut == "bottom right":
+                        canvas.line(starting_coords[0] + card_width, starting_coords[1], starting_coords[0] + card_width + 10, starting_coords[1])
+                        canvas.line(starting_coords[0] + card_width, starting_coords[1], starting_coords[0] + card_width, starting_coords[1]-10)
+                    elif cut == "-":  # position 1
+                        if position == 1:
+                            canvas.line(starting_coords[0],
+                                        starting_coords[1] + card_height,
+                                        starting_coords[0] - 10,
+                                        starting_coords[1] + card_height)
+                        elif position == 2:
+                            canvas.line(starting_coords[0] + card_width,
+                                        starting_coords[1] + card_height,
+                                        starting_coords[0] + card_width - 10,
+                                        starting_coords[1] + card_height)
+                    elif cut == "+":  # position 2
+                        if position == 1:
+                            canvas.line(starting_coords[0] - 5,
+                                        starting_coords[1] + card_height,
+                                        starting_coords[0] + 5,
+                                        starting_coords[1] + card_height)
+
+                            canvas.line(starting_coords[0],
+                                        starting_coords[1] + card_height - 5,
+                                        starting_coords[0],
+                                        starting_coords[1] + card_height + 5)
+                        elif position == 2:
+                            canvas.line(starting_coords[0] + card_width - 5,
+                                        starting_coords[1] + card_height,
+                                        starting_coords[0] + card_width + 5,
+                                        starting_coords[1] + card_height)
+
+                            canvas.line(starting_coords[0] + card_width,
+                                        starting_coords[1] + card_height - 5,
+                                        starting_coords[0] + card_width,
+                                        starting_coords[1] + card_height + 5)
+
+                    elif cut == "|":  # position 3
+                        if position == 3:
+                            canvas.line(starting_coords[0] + card_width,
+                                        starting_coords[1],
+                                        starting_coords[0] + card_width,
+                                        starting_coords[1] - 10)
+                        elif position == 2:
+                            canvas.line(starting_coords[0] + card_width,
+                                        starting_coords[1] + card_height,
+                                        starting_coords[0] + card_width,
+                                        starting_coords[1] + card_height - 10)
+                        elif position == 1:
+                            canvas.line(starting_coords[0],
+                                        starting_coords[1] + card_height,
+                                        starting_coords[0],
+                                        starting_coords[1] + card_height - 10)
+                        elif position == 0:
+                            canvas.line(starting_coords[0],
+                                        starting_coords[1],
+                                        starting_coords[0],
+                                        starting_coords[1] - 10)
+
+
 
                 # draw a box
                 if person.get("party") == "R":
-                    canvas.setFillColorRGB(188/256, 123/256, 73/256)  # R
+                    canvas.setFillColorRGB(154/256, 35/256, 35/256)  # R 154	35	35
                 else:
-                    canvas.setFillColorRGB(64/256, 75/256, 179/256)  # D
+                    canvas.setFillColorRGB(37/256, 46/256, 190/256)  # D 37	46	190
                 canvas.rect(starting_coords[0], starting_coords[1] + card_height - line_height * 3.25,
                             card_width, line_height*2, stroke=0, fill=1)
                 canvas.setFillColorRGB(0,0,0)
@@ -130,18 +220,14 @@ def draw():
                 #     image = person.get("saved_image")
                 # image
                 try:
+                    # todo: uncomment
+                    # pass
                     img = ImageReader(person.get("saved_image"))
                     canvas.drawImage(img,
                                      x=round(starting_coords[0] + inch * .5, 4),
                                      y=round(starting_coords[1] + y_card_buffer/2, 4),
                                      height=image_height,
                                      width=image_width,)
-                    # canvas.drawInlineImage(person.get("saved_image"),
-                    #                        x=round(starting_coords[0] + inch * .5, 4),
-                    #                        y=round(starting_coords[1] + y_card_buffer/2, 4),
-                    #                        height=image_height,
-                    #                        width=image_width,)
-                                           # preserveAspectRatio=True)
                 except OSError:
                     pass
 
