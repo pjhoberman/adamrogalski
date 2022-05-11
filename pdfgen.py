@@ -1,19 +1,19 @@
 import csv
+import re
 
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen.textobject import PDFTextObject
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.lib.units import inch
-from reportlab.lib.pagesizes import LETTER
-import os
 
 # pdfmetrics.registerFont(TTFont("Consola-regular", "CONSOLA.TTF"))  # todo: make sure the file exists
-pdfmetrics.registerFont(TTFont("TimesNewRoman", "Times New Roman.ttf"))
-FONT = "Times-Roman"  # or TimesNewRoman
+pdfmetrics.registerFont(TTFont("DIN", "DIN Alternate Bold.ttf"))
+FONT = "DIN"  # or TimesNewRoman
 # todo
-#  - extra long strings
+#  - cut lines on right column - make sure all the cards are the same
+#  - page cut lines
 
 
 def make_ordinal(n):
@@ -34,19 +34,28 @@ def make_ordinal(n):
     return str(n) + suffix
 
 
+FONT_SIZE = 10
+CAP_FONT_SIZE = 12
+
 def write_special_text(c: Canvas, words: str, x: [int, float], y: [int, float], party=None):
     text = c.beginText()
     text.setTextOrigin(x, y)
+    font_size = FONT_SIZE
+    cap_font_size = CAP_FONT_SIZE
+    if party and len(words) + len(party) > 20:
+        font_size = 6
+        cap_font_size = 10
+    # print(words, party, len(words) + (len(party) if party else 0), font_size)
     for letter in words:
         if letter.isupper():
-            text.setFont(FONT, 10)
+            text.setFont(FONT, cap_font_size)
             text.textOut(letter)
         else:
-            text.setFont(FONT, 6)
+            text.setFont(FONT, font_size)
             text.textOut(letter.upper())
 
     if party:
-        text.setFont(FONT, 10)
+        text.setFont(FONT, cap_font_size)
         text.textOut(f" {party}")
     return text
 
@@ -54,8 +63,31 @@ def write_special_text(c: Canvas, words: str, x: [int, float], y: [int, float], 
 def write_text(c: Canvas, words: str, x: [int, float], y: [int, float]):
     text = c.beginText()
     text.setTextOrigin(x, y)
-    text.setFont(FONT, 8)
-    text.textOut(words)
+    text.setFont(FONT, FONT_SIZE)
+    if len(words) > 26:
+        words = words.replace("/", " / ")
+        words = iter(words.split())
+        line1 = ""
+        # line2 = ""
+        while True:
+            next_word = next(words)
+            test = line1 + next_word + " "
+            if len(test) > 26:
+                break
+            else:
+                line1 = test
+            # line1 += next(words) + " "
+        line2 = next_word
+        while True:
+            try:
+                line2 += next(words) + " "
+            except StopIteration:
+                break
+        text.textLine(line1)
+        text.textLine(line2)
+
+    else:
+        text.textOut(words)
     return text
 
 
@@ -145,6 +177,10 @@ def draw():
 
                 # cut lines
                 cuts = cut_lines.get(i, {}).get(j, {})
+                if i == 0:
+                    width_adjustment = 11
+                else:
+                    width_adjustment = 0
                 for position, cut in cuts.items():
                     if cut == "bottom left":
                         canvas.line(starting_coords[0], starting_coords[1], starting_coords[0] - 10, starting_coords[1])
@@ -181,26 +217,26 @@ def draw():
                                         starting_coords[0],
                                         starting_coords[1] + card_height + 5)
                         elif position == 2:
-                            canvas.line(starting_coords[0] + card_width - 5,
+                            canvas.line(starting_coords[0] + card_width - 5 + width_adjustment,
                                         starting_coords[1] + card_height,
-                                        starting_coords[0] + card_width + 5,
+                                        starting_coords[0] + card_width + 5 + width_adjustment,
                                         starting_coords[1] + card_height)
 
-                            canvas.line(starting_coords[0] + card_width,
+                            canvas.line(starting_coords[0] + card_width + width_adjustment,
                                         starting_coords[1] + card_height - 5,
-                                        starting_coords[0] + card_width,
+                                        starting_coords[0] + card_width + width_adjustment,
                                         starting_coords[1] + card_height + 5)
 
                     elif cut == "|":  # position 3
                         if position == 3:
-                            canvas.line(starting_coords[0] + card_width,
+                            canvas.line(starting_coords[0] + card_width + width_adjustment,
                                         starting_coords[1],
-                                        starting_coords[0] + card_width,
+                                        starting_coords[0] + card_width + width_adjustment,
                                         starting_coords[1] - 10)
                         elif position == 2:
-                            canvas.line(starting_coords[0] + card_width,
+                            canvas.line(starting_coords[0] + card_width + width_adjustment,
                                         starting_coords[1] + card_height,
-                                        starting_coords[0] + card_width,
+                                        starting_coords[0] + card_width + width_adjustment,
                                         starting_coords[1] + card_height - 10)
                         elif position == 1:
                             canvas.line(starting_coords[0],
@@ -221,7 +257,7 @@ def draw():
                     canvas.setFillColorRGB(37/256, 46/256, 190/256)  # D 37	46	190
                     # canvas.setStrokeColorRGB(1, 1, 1)
                 canvas.rect(starting_coords[0], starting_coords[1] + card_height - line_height * 3.25,
-                            card_width, line_height*2, stroke=0, fill=1)
+                            card_width + 12, line_height*2, stroke=0, fill=1)
                 canvas.setFillColorRGB(0,0,0)
                 try:
                     img = ImageReader(person.get("saved_image"))
@@ -239,13 +275,14 @@ def draw():
                                           y=starting_coords[1] + card_height - line_height * 1)
                 canvas.drawText(text)
 
-                if person.get("party") == "D":
-                    canvas.setFillColorRGB(1, 1, 1)
-                else:
-                    canvas.setFillColorRGB(0, 0, 0)
+                canvas.setFillColorRGB(1, 1, 1)
+                # if person.get("party") == "D":
+                #     canvas.setFillColorRGB(1, 1, 1)
+                # else:
+                #     canvas.setFillColorRGB(0, 0, 0)
 
                 # side
-                if person.get("side") == "senate":
+                if person.get("side") == "Senate":
                     _side = "Senator"
                 else:
                     _side = "Representative"
@@ -254,7 +291,12 @@ def draw():
                 canvas.drawText(text)
 
                 # name
-                text = write_special_text(canvas, person.get('name'),
+                # drop middle name
+                try:
+                    name = " ".join(re.match(r"(.*)\s\w\.\s(.*)", person.get('name', '')).groups())
+                except AttributeError:
+                    name = person.get("name", "")
+                text = write_special_text(canvas, name,
                                           x=starting_coords[0] + card_margin + image_width + inch * .5,
                                           y=starting_coords[1] + card_height - line_height * 3,
                                           party=f"({person.get('party')})")
@@ -271,7 +313,7 @@ def draw():
                 if person.get("title") and person.get("title") != "":
                     text = write_text(canvas, person.get("title"),
                                       x=starting_coords[0] + card_margin + image_width + inch * .5,
-                                      y=starting_coords[1] + card_height - line_height * 5.25)
+                                      y=starting_coords[1] + card_height - line_height * 5)
                     canvas.drawText(text)
 
     canvas.save()
