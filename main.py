@@ -2,6 +2,7 @@ import csv
 import os
 import shutil
 import urllib.request
+from urllib.error import HTTPError
 
 from PIL import Image
 from selenium import webdriver
@@ -64,24 +65,27 @@ def get_images(side, data):
         driver.get(record['page_link'])
         src = driver.find_element(By.CSS_SELECTOR, '[alt*="Photograph"]').get_attribute("src")
         fn = record.get('name').replace(' ', '-').replace('.', '').replace(',', '').lower()
-        urllib.request.urlretrieve(src, f"{side}/{fn}.jpg")
-        record['image_url'] = src
-        record['saved_image'] = f"{side}/{fn}.jpg"
+        try:
+            urllib.request.urlretrieve(src, f"{side}/{fn}.jpg")
+            record['image_url'] = src
+            record['saved_image'] = f"{side}/{fn}.jpg"
 
-        # downsize images
-        if os.stat(f"{side}/{fn}.jpg").st_size / 1000 > 300:  # over 300k
-            size = os.stat(f"{side}/{fn}.jpg").st_size / 1000
-            shutil.copyfile(f"{side}/{fn}.jpg", f"{side}/{fn}.original.jpg")
-            img = Image.open(f"{side}/{fn}.jpg")
-            if size > 1000:
-                quality = 33
-            elif size > 500:
-                quality = 50
-            elif size > 300:
-                quality = 75
-            img.save(f"{side}/{fn}.jpg", quality=quality)
+            # downsize images
+            if os.stat(f"{side}/{fn}.jpg").st_size / 1000 > 300:  # over 300k
+                size = os.stat(f"{side}/{fn}.jpg").st_size / 1000
+                shutil.copyfile(f"{side}/{fn}.jpg", f"{side}/{fn}.original.jpg")
+                img = Image.open(f"{side}/{fn}.jpg")
+                if size > 1000:
+                    quality = 33
+                elif size > 500:
+                    quality = 50
+                elif size > 300:
+                    quality = 75
+                img.save(f"{side}/{fn}.jpg", quality=quality)
 
-
+        except HTTPError:
+            record['image_url'] = src
+            record['saved_image'] = "error"
 #
 # os.makedirs("senate", exist_ok=True)
 # for record in senate_data:

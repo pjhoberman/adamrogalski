@@ -37,14 +37,15 @@ def make_ordinal(n):
 FONT_SIZE = 10
 CAP_FONT_SIZE = 12
 
+
 def write_special_text(c: Canvas, words: str, x: [int, float], y: [int, float], party=None):
     text = c.beginText()
     text.setTextOrigin(x, y)
     font_size = FONT_SIZE
     cap_font_size = CAP_FONT_SIZE
-    if party and len(words) + len(party) > 20:
-        font_size = 6
-        cap_font_size = 10
+    # if party and len(words) + len(party) > 20:
+    #     font_size = 6
+    #     cap_font_size = 10
     # print(words, party, len(words) + (len(party) if party else 0), font_size)
     for letter in words:
         if letter.isupper():
@@ -80,7 +81,7 @@ def write_text(c: Canvas, words: str, x: [int, float], y: [int, float]):
         line2 = next_word
         while True:
             try:
-                line2 += next(words) + " "
+                line2 += " " + next(words)
             except StopIteration:
                 break
         text.textLine(line1)
@@ -93,29 +94,47 @@ def write_text(c: Canvas, words: str, x: [int, float], y: [int, float]):
 
 def draw():
     page_height, page_width = LETTER
-
+    # todo: make cards bigger, lower margin as well
     # margin = .5 * inch  # .25" on each side
-    x_margin = .41 * inch
-    y_margin = .61 * inch
+    # x_margin = .41 * inch
+    x_margin = 36
+
+    # y_margin = .61 * inch
+    y_margin = 36
+
+
+
     # card_buffer = .125 * inch  # .125" between cards
-    y_card_buffer = .15 * inch
-    x_card_buffer = .15 * inch
-    card_width = page_width / 3 - x_margin  # 3 wide
-    card_height = (page_height - y_margin*2 - y_card_buffer*4) / 4  # 4 high
+    y_card_buffer = .15 * inch * 0
+    x_card_buffer = .15 * inch * 0
+    # card_width = page_width / 3 - x_margin  # 3 wide
+    card_width = 3.5 * inch
+
+    # card_height = (page_height - y_margin*2 - y_card_buffer*4) / 4  # 4 high
+    card_height = 2 * inch
 
     line_height = 20
     card_margin = 10
 
-    image_width = 1 * inch
-    image_height = 1.5 * inch
+    image_width = 1.166 * inch
+    image_height = 1.75 * inch
 
     people = []
+    reds = []
+    blues = []
     with open("output.csv", "r") as file:
         reader = csv.DictReader(file)
         for row in reader:
-            people.append(row)
+            if row.get("party") == "D":
+                blues.append(row)
+            else:
+                reds.append(row)
+            # people.append(row)
 
-    people = iter(people)
+    # people = iter(people)
+    reds = iter(reds)
+    blues = iter(blues)
+
 
     def set_up_page(c):
         # draw page markers
@@ -135,12 +154,14 @@ def draw():
         c.line(page_width - x_margin/2, y_margin, page_width - x_margin + 2, y_margin)  # horizontal
         c.line(page_width - x_margin, y_margin/2, page_width - x_margin, y_margin - 2)  # vertical
 
-    starting_coords = [x_margin, y_margin]
+    starting_coords = [x_margin/2, y_margin/2]
     first_page = True
     page = 1
     canvas = Canvas(f"output{page}.pdf", pagesize=(page_width, page_height))
     canvas.setStrokeColorRGB(0, 0, 0)
 
+    on_reds = True
+    current_list = reds
     while True:
         if not first_page:
             canvas.showPage()
@@ -150,15 +171,23 @@ def draw():
         print(f"page: {page}\n")
         set_up_page(canvas)
         for i in range(3):  # rows
-            starting_coords[0] = x_margin + (card_width + x_card_buffer) * i + x_card_buffer/2
+            starting_coords[0] = x_margin/2 + (card_width + x_card_buffer) * i + x_card_buffer/2
             for j in range(4):  # columns
                 try:
-                    person = next(people)
+                    if on_reds:
+                        person = next(reds)
+                    else:
+                        person = next(blues)
                 except StopIteration:
-                    canvas.save()
-                    return
+                    if on_reds:
+                        canvas.showPage()
+                        on_reds = False
+                        continue
+                    else:
+                        canvas.save()
+                        return
                 # print(person)
-                starting_coords[1] = y_margin + (card_height + y_card_buffer) * j + y_card_buffer/2
+                starting_coords[1] = y_margin/2 + (card_height + y_card_buffer) * j + y_card_buffer/2
 
                 cut_lines = {
                     0: {
@@ -217,14 +246,14 @@ def draw():
                                         starting_coords[0],
                                         starting_coords[1] + card_height + 5)
                         elif position == 2:
-                            canvas.line(starting_coords[0] + card_width - 5 + width_adjustment,
+                            canvas.line(starting_coords[0] + card_width - 5 + width_adjustment*0,
                                         starting_coords[1] + card_height,
-                                        starting_coords[0] + card_width + 5 + width_adjustment,
+                                        starting_coords[0] + card_width + 5 + width_adjustment*0,
                                         starting_coords[1] + card_height)
 
-                            canvas.line(starting_coords[0] + card_width + width_adjustment,
+                            canvas.line(starting_coords[0] + card_width + width_adjustment*0,
                                         starting_coords[1] + card_height - 5,
-                                        starting_coords[0] + card_width + width_adjustment,
+                                        starting_coords[0] + card_width + width_adjustment*0,
                                         starting_coords[1] + card_height + 5)
 
                     elif cut == "|":  # position 3
@@ -262,16 +291,18 @@ def draw():
                 try:
                     img = ImageReader(person.get("saved_image"))
                     canvas.drawImage(img,
-                                     x=round(starting_coords[0] + inch * .5, 4),
-                                     y=round(starting_coords[1] + y_card_buffer/2, 4),
+                                     x=round(starting_coords[0] + .35 * inch, 4),
+                                     y=round(starting_coords[1] + .15*inch, 4),
                                      height=image_height,
                                      width=image_width,)
                 except OSError:
                     pass
 
+                x_alignment = starting_coords[0] + card_margin + image_width + inch * .3
+
                 # State
                 text = write_special_text(canvas, "Illinois",
-                                          x=starting_coords[0] + card_margin + image_width + inch * .5,
+                                          x=x_alignment,
                                           y=starting_coords[1] + card_height - line_height * 1)
                 canvas.drawText(text)
 
@@ -286,7 +317,7 @@ def draw():
                     _side = "Senator"
                 else:
                     _side = "Representative"
-                text = write_special_text(canvas, _side, x=starting_coords[0] + card_margin + image_width + inch * .5,
+                text = write_special_text(canvas, _side, x=x_alignment,
                                           y=starting_coords[1] + card_height - line_height * 2)
                 canvas.drawText(text)
 
@@ -297,8 +328,8 @@ def draw():
                 except AttributeError:
                     name = person.get("name", "")
                 text = write_special_text(canvas, name,
-                                          x=starting_coords[0] + card_margin + image_width + inch * .5,
-                                          y=starting_coords[1] + card_height - line_height * 3,
+                                          x=x_alignment,
+                                          y=starting_coords[1] + card_height - line_height * 2.75,
                                           party=f"({person.get('party')})")
                 canvas.drawText(text)
 
@@ -306,15 +337,22 @@ def draw():
 
                 # District
                 text = write_text(canvas, f"{make_ordinal(person.get('district'))} District",
-                                  x=starting_coords[0] + card_margin + image_width + inch * .5,
+                                  x=x_alignment,
                                   y=starting_coords[1] + card_height - line_height * 4)
                 canvas.drawText(text)
 
                 if person.get("title") and person.get("title") != "":
                     text = write_text(canvas, person.get("title"),
-                                      x=starting_coords[0] + card_margin + image_width + inch * .5,
-                                      y=starting_coords[1] + card_height - line_height * 5)
+                                      x=x_alignment,
+                                      y=starting_coords[1] + card_height - line_height * 4.75)
                     canvas.drawText(text)
+
+                img = ImageReader("RCMlogo-widegray.jpg")
+                canvas.drawImage(img,
+                                 x=x_alignment,
+                                 y=starting_coords[1] + 11, #+ card_height - line_height * 6,
+                                 height=11,
+                                 width=54,)
 
     canvas.save()
 
