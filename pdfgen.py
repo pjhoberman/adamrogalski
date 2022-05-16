@@ -196,6 +196,13 @@ def draw():
                         2: {1: "-", 2: "+"},
                         3: {1: "top left", 2: "|"},
                     },
+                    1: {
+                        0: {0: "|", 1: "+", 2: "+", 3: "|"},
+                        1: {1: "+", 2: "+"},
+                        2: {1: "+", 2: "+"},
+                        3: {1: "|", 2: "|"}
+
+                    },
                     2: {
                         0: {0: "|", 1: "+", 2: "-", 3: "bottom right"},
                         1: {1: "+", 2: "-"},
@@ -206,10 +213,6 @@ def draw():
 
                 # cut lines
                 cuts = cut_lines.get(i, {}).get(j, {})
-                if i == 0:
-                    width_adjustment = 11
-                else:
-                    width_adjustment = 0
                 for position, cut in cuts.items():
                     if cut == "bottom left":
                         canvas.line(starting_coords[0], starting_coords[1], starting_coords[0] - 10, starting_coords[1])
@@ -246,26 +249,26 @@ def draw():
                                         starting_coords[0],
                                         starting_coords[1] + card_height + 5)
                         elif position == 2:
-                            canvas.line(starting_coords[0] + card_width - 5 + width_adjustment*0,
+                            canvas.line(starting_coords[0] + card_width - 5,
                                         starting_coords[1] + card_height,
-                                        starting_coords[0] + card_width + 5 + width_adjustment*0,
+                                        starting_coords[0] + card_width + 5,
                                         starting_coords[1] + card_height)
 
-                            canvas.line(starting_coords[0] + card_width + width_adjustment*0,
+                            canvas.line(starting_coords[0] + card_width,
                                         starting_coords[1] + card_height - 5,
-                                        starting_coords[0] + card_width + width_adjustment*0,
+                                        starting_coords[0] + card_width,
                                         starting_coords[1] + card_height + 5)
 
                     elif cut == "|":  # position 3
                         if position == 3:
-                            canvas.line(starting_coords[0] + card_width + width_adjustment,
+                            canvas.line(starting_coords[0] + card_width,
                                         starting_coords[1],
-                                        starting_coords[0] + card_width + width_adjustment,
+                                        starting_coords[0] + card_width,
                                         starting_coords[1] - 10)
                         elif position == 2:
-                            canvas.line(starting_coords[0] + card_width + width_adjustment,
+                            canvas.line(starting_coords[0] + card_width,
                                         starting_coords[1] + card_height,
-                                        starting_coords[0] + card_width + width_adjustment,
+                                        starting_coords[0] + card_width,
                                         starting_coords[1] + card_height - 10)
                         elif position == 1:
                             canvas.line(starting_coords[0],
