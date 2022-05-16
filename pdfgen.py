@@ -169,7 +169,7 @@ def draw():
             first_page = False
         page += 1
         print(f"page: {page}\n")
-        set_up_page(canvas)
+        # set_up_page(canvas)  # commenting out until we know proper lines
         for i in range(3):  # rows
             starting_coords[0] = x_margin/2 + (card_width + x_card_buffer) * i + x_card_buffer/2
             for j in range(4):  # columns
@@ -289,7 +289,10 @@ def draw():
                             card_width + 12, line_height*2, stroke=0, fill=1)
                 canvas.setFillColorRGB(0,0,0)
                 try:
-                    img = ImageReader(person.get("saved_image"))
+                    if person.get("saved_image") == "error":
+                        img = ImageReader("no-image.jpg")
+                    else:
+                        img = ImageReader(person.get("saved_image"))
                     canvas.drawImage(img,
                                      x=round(starting_coords[0] + .35 * inch, 4),
                                      y=round(starting_coords[1] + .15*inch, 4),
