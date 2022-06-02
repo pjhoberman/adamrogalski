@@ -217,47 +217,48 @@ def draw():
 
                 # cut lines
                 cuts = cut_lines.get(i, {}).get(j, {})
-                adjustment = .125 * inch
+                adjustment = .125 * inch * 0
+                extra_adjustment = .125 * inch
                 for position, cut in cuts.items():
                     if cut == "bottom left":
-                        canvas.line(x1=starting_coords[0] - adjustment,
+                        canvas.line(x1=starting_coords[0] - adjustment - extra_adjustment,
                                     y1=starting_coords[1] - adjustment,
-                                    x2=starting_coords[0] - 10 - adjustment,
+                                    x2=starting_coords[0] - 10 - adjustment - extra_adjustment,
                                     y2=starting_coords[1] - adjustment)
                         canvas.line(x1=starting_coords[0] - adjustment,
-                                    y1=starting_coords[1] - adjustment,
+                                    y1=starting_coords[1] - adjustment - extra_adjustment,
                                     x2=starting_coords[0] - adjustment,
-                                    y2=starting_coords[1]-10 - adjustment)
+                                    y2=starting_coords[1]-10 - adjustment - extra_adjustment)
                     elif cut == "top left":
-                        canvas.line(starting_coords[0] - adjustment,
+                        canvas.line(starting_coords[0] - adjustment - extra_adjustment,
                                     starting_coords[1] + card_height + adjustment,
-                                    starting_coords[0] - 10 - adjustment,
+                                    starting_coords[0] - 10 - adjustment - extra_adjustment,
                                     starting_coords[1] + card_height + adjustment)
                         canvas.line(starting_coords[0] - adjustment,
-                                    starting_coords[1] + card_height + adjustment,
+                                    starting_coords[1] + card_height + adjustment + extra_adjustment,
                                     starting_coords[0] - adjustment,
-                                    starting_coords[1]+10 + card_height + adjustment)
+                                    starting_coords[1]+10 + card_height + adjustment + extra_adjustment)
                     elif cut == "top right":
-                        canvas.line(starting_coords[0] + card_width + adjustment,
+                        canvas.line(starting_coords[0] + card_width + adjustment + extra_adjustment,
                                     starting_coords[1] + card_height + adjustment,
-                                    starting_coords[0] + card_width + 10 + adjustment,
+                                    starting_coords[0] + card_width + 10 + adjustment + extra_adjustment,
                                     starting_coords[1] + card_height + adjustment)
                         canvas.line(starting_coords[0] + card_width + adjustment,
-                                    starting_coords[1] + card_height + adjustment,
+                                    starting_coords[1] + card_height + adjustment + extra_adjustment,
                                     starting_coords[0] + card_width + adjustment,
-                                    starting_coords[1]+10 + card_height + adjustment)
+                                    starting_coords[1]+10 + card_height + adjustment + extra_adjustment)
                     elif cut == "bottom right":
-                        canvas.line(starting_coords[0] + card_width + adjustment,
+                        canvas.line(starting_coords[0] + card_width + adjustment + extra_adjustment,
                                     starting_coords[1] - adjustment,
-                                    starting_coords[0] + card_width + 10 + adjustment,
+                                    starting_coords[0] + card_width + 10 + adjustment + extra_adjustment,
                                     starting_coords[1] - adjustment)
                         canvas.line(starting_coords[0] + card_width + adjustment,
-                                    starting_coords[1] - adjustment,
+                                    starting_coords[1] - adjustment - extra_adjustment,
                                     starting_coords[0] + card_width + adjustment,
-                                    starting_coords[1]-10 - adjustment)
+                                    starting_coords[1]-10 - adjustment - extra_adjustment)
                     elif cut == "-":  # position 1
                         if position == 1:
-                            canvas.line(starting_coords[0] - adjustment,
+                            canvas.line(starting_coords[0] - adjustment - 10,
                                         starting_coords[1] + card_height,
                                         0,
                                         starting_coords[1] + card_height)
@@ -338,8 +339,10 @@ def draw():
                 else:
                     canvas.setFillColorRGB(37/256, 46/256, 190/256)  # D 37	46	190
                     # canvas.setStrokeColorRGB(1, 1, 1)
-                canvas.rect(starting_coords[0], starting_coords[1] + card_height - line_height * 3.25,
-                            card_width + 12, line_height*2, stroke=0, fill=1)
+                left_fill = 30 if i == 0 else 0
+                right_fill = 30 if i == 2 else 0
+                canvas.rect(starting_coords[0] - left_fill, starting_coords[1] + card_height - line_height * 3.25,
+                            card_width + 12 + left_fill + right_fill, line_height*2, stroke=0, fill=1)
                 canvas.setFillColorRGB(0,0,0)
                 try:
                     if person.get("saved_image") == "error":

@@ -5,3 +5,4 @@ senate/*
 house/*
 *.zip
 .DS_Store
+*output*
