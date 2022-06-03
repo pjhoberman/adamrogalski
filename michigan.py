@@ -1,9 +1,17 @@
+from urllib.request import urlretrieve
+from urllib.parse import urlparse
 import csv
 import re
+import os
 
 from bs4 import BeautifulSoup
 import requests
 
+
+def download_image(side, url, fn):
+    directory = f"michigan/{side}"
+    os.makedirs(directory, exist_ok=True)
+    urlretrieve(url, f"{directory}/{fn}.jpg")
 
 def scrape_michigan():
     base_url = "https://senate.michigan.gov/"
@@ -48,12 +56,16 @@ def scrape_michigan():
                 url = el.h2.a.attrs.get("href")
                 if el.h2.nextSibling and el.h2.nextSibling != "\n":
                     _contact["title"] = el.h2.nextSibling.strip()
-                    district = el.h2.nextSibling.nextSibling.nextSibling.text.replace("(PDF)", "").replace("Map", "").replace("  ", " ")
+                    district = el.h2.nextSibling.nextSibling.nextSibling.text  # .replace("(PDF)", "").replace("Map", "").replace("  ", " ")
                 else:
-                    district = el.h2.nextSibling.nextSibling.text.replace("(PDF)", "").replace("Map", "").replace("  ", " ")
+                    district = el.h2.nextSibling.nextSibling.text  # .replace("(PDF)", "").replace("Map", "").replace("  ", " ")
+                district = re.findall(r"\d+", district)[0]
                 # print(name)
                 # print(district)
                 # print("\n")
+                if not urlparse(url).netloc:
+                    url = base_url + url
+
                 _contact["name"] = name
                 _contact["page_link"] = url
                 _contact["district"] = district
@@ -66,10 +78,20 @@ def scrape_michigan():
         #     pass
         el = el.nextSibling
 
+    # download images
+    for record in data:
+        fn = record.get("name").replace(' ', '-').replace('.', '').replace(',', '').lower()
+        download_image("senate",
+                       record.get("image_url"),
+                       fn)
+        record["saved_image"] = f"michigan/senate/{fn}.jpg"
+
     with open("michigan.csv", "w") as file:
         writer = csv.DictWriter(file, fieldnames=contact.keys())
         writer.writeheader()
         writer.writerows(data)
+
+
 
 if __name__ == '__main__':
     scrape_michigan()

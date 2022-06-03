@@ -96,7 +96,7 @@ def write_text(c: Canvas, words: str, x: [int, float], y: [int, float]):
     return text
 
 
-def draw():
+def draw(data_file="output.csv", output_file="output.pdf", state="Illinois"):
     page_height, page_width = LETTER
     # todo: make cards bigger, lower margin as well
     # margin = .5 * inch  # .25" on each side
@@ -126,7 +126,7 @@ def draw():
     people = []
     reds = []
     blues = []
-    with open("output.csv", "r") as file:
+    with open(data_file, "r") as file:
         reader = csv.DictReader(file)
         for row in reader:
             if row.get("party") == "D":
@@ -161,7 +161,7 @@ def draw():
     starting_coords = [x_margin/2, y_margin/2]
     first_page = True
     page = 1
-    canvas = Canvas(f"output{page}.pdf", pagesize=(page_width, page_height))
+    canvas = Canvas(output_file, pagesize=(page_width, page_height))
     canvas.setStrokeColorRGB(0, 0, 0)
 
     on_reds = True
@@ -353,14 +353,15 @@ def draw():
                                      x=round(starting_coords[0] + .35 * inch, 4),
                                      y=round(starting_coords[1] + .15*inch, 4),
                                      height=image_height,
-                                     width=image_width,)
+                                     width=image_width,
+                                     preserveAspectRatio=True)
                 except OSError:
                     pass
 
                 x_alignment = starting_coords[0] + card_margin + image_width + inch * .3
 
                 # State
-                text = write_special_text(canvas, "Illinois",
+                text = write_special_text(canvas, state,
                                           x=x_alignment,
                                           y=starting_coords[1] + card_height - line_height * 1)
                 canvas.drawText(text)
@@ -417,4 +418,4 @@ def draw():
 
 
 if __name__ == '__main__':
-    draw()
+    draw(data_file="michigan.csv", output_file="michigan.pdf", state="Michigan")
