@@ -1,9 +1,11 @@
+import shutil
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
 import csv
 import re
 import os
 
+from PIL import Image
 from bs4 import BeautifulSoup
 import requests
 
@@ -18,10 +20,27 @@ CONTACT = {
     "saved_image": "",
 }
 
-def download_image(side, url, fn):
+
+def download_image(side, url, fn, extension=".jpg"):
     directory = f"michigan/{side}"
     os.makedirs(directory, exist_ok=True)
-    urlretrieve(url, f"{directory}/{fn}.jpg")
+    dest = f"{directory}/{fn}{extension}"
+    urlretrieve(url, dest)
+
+    # downsize images
+    if os.stat(dest).st_size / 1000 > 300:  # over 300k
+        size = os.stat(dest).st_size / 1000
+        # shutil.copyfile(f"{side}/{fn}.jpg", f"{side}/{fn}.original.jpg")
+        img = Image.open(dest)
+        quality = 100
+        if size > 1000:
+            quality = 33
+        elif size > 500:
+            quality = 50
+        elif size > 300:
+            quality = 75
+        img.save(dest, quality=quality)
+
 
 def scrape_michigan_senators():
     base_url = "https://senate.michigan.gov/"
@@ -81,14 +100,17 @@ def scrape_michigan_senators():
     # download images
     for record in data:
         fn = record.get("name").replace(' ', '-').replace('.', '').replace(',', '').lower()
-        download_image("senate",
-                       record.get("image_url"),
-                       fn)
+        if not os.path.isfile(f"michigan/senate/{fn}.jpg"):
+            download_image("senate",
+                           record.get("image_url"),
+                           fn)
         record["saved_image"] = f"michigan/senate/{fn}.jpg"
 
-    with open("michigan.csv", "w") as file:
+    write_header = not os.path.isfile("michigan.csv")
+    with open("michigan.csv", "a") as file:
         writer = csv.DictWriter(file, fieldnames=CONTACT.keys())
-        writer.writeheader()
+        if write_header:
+            writer.writeheader()
         writer.writerows(data)
 
 def scrape_michigan_house():
@@ -101,7 +123,6 @@ def scrape_michigan_house():
     data = []
     for rep in members:
         # skip first one
-        print(rep.text)
         contact = CONTACT.copy()
         contact['side'] = "House"
 
@@ -121,16 +142,57 @@ def scrape_michigan_house():
             pass  # no link
         data.append(contact)
 
-    for rep in data:
-        if data.get("page_link") and # todo: check if using standard d or r sites, and then grab pic
+    print("Downloading images")
+    for i, rep in enumerate(data):
+        print(f"\t{i}/{len(data)}")
+        link = rep.get("page_link")
+        if not link:
+            continue
 
+        base = urlparse(link).netloc
+
+        if base == "gophouse.org":
+            res = requests.get(link)
+            soup = BeautifulSoup(res.content, 'html.parser')
+            img_url = soup.find("img", class_="w-full").attrs.get("src")
+            rep['image_url'] = img_url
+            fn = rep.get("name").replace(' ', '-').replace('.', '').replace(',', '').lower()
+            _, ext = os.path.splitext(img_url)
+            if not os.path.isfile(f"michigan/house/{fn}{ext}"):
+                download_image("house", img_url, fn, extension=ext)
+            rep["saved_image"] = f"michigan/house/{fn}{ext}"
+
+        elif base == "housedems.com":
+            res = requests.get(link)
+            soup = BeautifulSoup(res.content, 'html.parser')
+            try:
+                img_url = soup.find(class_="post-content").findChild('div', class_="lazyload").attrs.get("data-bg-url")
+            except AttributeError:
+                rep["saved_image"] = "post content not found"
+                continue
+            if not img_url:
+                rep['saved_image'] = "x"
+                rep['image_url'] = "x"
+                continue
+            rep['image_url'] = img_url
+            fn = rep.get("name").replace(' ', '-').replace('.', '').replace(',', '').lower()
+            if not os.path.isfile(f"michigan/house/{fn}.jpg"):
+                download_image("house", img_url, fn)
+            rep["saved_image"] = f"michigan/house/{fn}.jpg"
+
+        else:
+            rep['saved_image'] = "None"
+            rep['image_url'] = "None"
+
+    write_header = not os.path.isfile("michigan.csv")
     with open("michigan.csv", "a") as file:
         writer = csv.DictWriter(file, fieldnames=CONTACT.keys())
-        # writer.writeheader()  # don't write row if this is after senate
+        if write_header:
+            writer.writeheader()  # don't write row if this is after senate
         writer.writerows(data)
 
 
 
 if __name__ == '__main__':
-    # scrape_michigan_senators()
+    scrape_michigan_senators()
     scrape_michigan_house()
