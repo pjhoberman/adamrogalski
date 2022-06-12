@@ -113,6 +113,28 @@ def scrape_michigan_senators():
             writer.writeheader()
         writer.writerows(data)
 
+def try_other_house_link(name):
+    res = requests.get("https://www.legislature.mi.gov/(S(vrj41w0gr3ymhtryc4rq0rso))/mileg.aspx?page=legislators")
+    soup = BeautifulSoup(res.content, "html.parser")
+    a = None
+    for tr in soup.find_all('tr'):
+        if name in tr.text:
+            for span in tr.find_all("span"):
+                if "Web Page" in span.text:
+                    a = span.a.attrs.get("href")
+                    break
+    return a
+
+def get_image_from_other_house_link(name):
+    res = requests.get("https://www.legislature.mi.gov/(S(vrj41w0gr3ymhtryc4rq0rso))/mileg.aspx?page=legislators")
+    soup = BeautifulSoup(res.content, "html.parser")
+    for tr in soup.find_all('tr'):
+        if name in tr.text:
+            return "https://www.legislature.mi.gov/" + tr.img.attrs.get('src')
+    return None
+
+
+
 def scrape_michigan_house():
     req = requests.get("https://www.house.mi.gov/AllRepresentatives")
     soup = BeautifulSoup(req.content, 'html.parser')
@@ -139,7 +161,15 @@ def scrape_michigan_house():
         try:
             contact['page_link'] = row1.find('a').attrs.get('href')
         except AttributeError:
-            pass  # no link
+            page_link = try_other_house_link(name)
+            if page_link:
+                contact['page_link'] = page_link
+            else:
+                contact['page_link'] = "no link"
+        if "housedems.com" not in contact['page_link'] and "gophouse.org" not in contact['page_link']:
+            page_link = try_other_house_link(name)
+            if page_link:
+                contact['page_link'] = page_link
         data.append(contact)
 
     print("Downloading images")
@@ -151,10 +181,16 @@ def scrape_michigan_house():
 
         base = urlparse(link).netloc
 
-        if base == "gophouse.org":
+        if "gophouse.org" in base:
             res = requests.get(link)
             soup = BeautifulSoup(res.content, 'html.parser')
-            img_url = soup.find("img", class_="w-full").attrs.get("src")
+            try:
+                img_url = soup.find("img", class_="w-full").attrs.get("src")
+            except AttributeError:
+                img_url = get_image_from_other_house_link(rep.get('name'))
+                if not img_url:
+                    rep['saved_image'] = "no image"
+                    continue
             rep['image_url'] = img_url
             fn = rep.get("name").replace(' ', '-').replace('.', '').replace(',', '').lower()
             _, ext = os.path.splitext(img_url)
@@ -164,9 +200,29 @@ def scrape_michigan_house():
 
         elif base == "housedems.com":
             res = requests.get(link)
+            # this might have redirected
+            new_url = res.request.url
+            if "hootsuite" in new_url:
+                url = try_other_house_link(rep.get("name"))
+                res = requests.get(url)
+                new_url = res.request.url
+            about_page = new_url + "about"
+            res = requests.get(about_page)
+
+            if res.request.url == 'https://housedems.com/about/':
+                # they're not at "about"
+                soup = BeautifulSoup(requests.get(new_url).content, 'html.parser')
+                for a in soup.select("li a"):
+                    if "Meet" in a.text:
+                        break
+                else:
+                    rep['saved_image'] = "Couldn't find image"
+                    rep['image_url'] = "Couldn't find image"
+                    continue
+                res = requests.get(a.attrs.get("href"))
             soup = BeautifulSoup(res.content, 'html.parser')
             try:
-                img_url = soup.find(class_="post-content").findChild('div', class_="lazyload").attrs.get("data-bg-url")
+                img_url = soup.find("a", text="Download Official Portrait").attrs.get("href")
             except AttributeError:
                 rep["saved_image"] = "post content not found"
                 continue
@@ -179,6 +235,12 @@ def scrape_michigan_house():
             if not os.path.isfile(f"michigan/house/{fn}.jpg"):
                 download_image("house", img_url, fn)
             rep["saved_image"] = f"michigan/house/{fn}.jpg"
+
+            # check for title
+            check = soup.find(class_="fusion-button-wrapper").nextSibling
+            if "Committees" in check.text:
+                continue
+            rep["title"] = check.text
 
         else:
             rep['saved_image'] = "None"

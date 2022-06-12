@@ -419,3 +419,4 @@ def draw(data_file="output.csv", output_file="output.pdf", state="Illinois"):
 
 if __name__ == '__main__':
     draw(data_file="michigan.csv", output_file="michigan.pdf", state="Michigan")
+    # draw()
