@@ -9,3 +9,7 @@ house/*
 michigan/
 *.csv
 *.pdf
+__pycache__/
+house-bk
+senate-bk
+

@@ -355,19 +355,19 @@ def draw(data_file="output.csv", output_file="output.pdf", state="Illinois"):
                         _width, _height = Image.open(person.get("saved_image")).size
                         # print(person.get("name"), image_size)
                         if _width > _height:
-                            print(person.get("name"))
+                            # print(person.get("name"))
                             # get the downsizing of the width, apply to height, and move y up that much
-                            print(f"y before: {y}")
-                            print(f"image_height: {image_height}")
-                            print(f"this image: {(image_width / _width) * _height}")
-                            print(f"dff: {(image_height - (image_width / _width) * _height)}")
-                            print(f"expected top of og: {y + image_height}")
-                            print(f"expected top of new: {y +  (image_height - (image_width / _width) * _height) + ((image_width / _width) * _height)}")
+                            # print(f"y before: {y}")
+                            # print(f"image_height: {image_height}")
+                            # print(f"this image: {(image_width / _width) * _height}")
+                            # print(f"dff: {(image_height - (image_width / _width) * _height)}")
+                            # print(f"expected top of og: {y + image_height}")
+                            # print(f"expected top of new: {y +  (image_height - (image_width / _width) * _height) + ((image_width / _width) * _height)}")
                             y += (image_height - (image_width / _width) * _height) / 4
                             y = round(y, 4)
-                            print(f"y after: {y}")
-                            print(f"check your work: {y + (image_width / _width) * _height}")
-                            print("\n")
+                            # print(f"y after: {y}")
+                            # print(f"check your work: {y + (image_width / _width) * _height}")
+                            # print("\n")
 
                         # if this_image_height < image_height:
                         #     y -= (image_height - this_image_height) / 2
@@ -439,8 +439,9 @@ def draw(data_file="output.csv", output_file="output.pdf", state="Illinois"):
                                  width=54,)
 
     canvas.save()
+    print(f"PDF saved to {output_file}")
 
 
 if __name__ == '__main__':
-    draw(data_file="michigan.csv", output_file="michigan.pdf", state="Michigan")
-    # draw()
+    # draw(data_file="michigan.csv", output_file="michigan.pdf", state="Michigan")
+    draw(data_file="illinois_data.csv", output_file="illinois.pdf", state="Illinois")

@@ -43,6 +43,7 @@ def download_image(side, url, fn, extension=".jpg"):
 
 
 def scrape_michigan_senators():
+    print("scraping michigan senate")
     base_url = "https://senate.michigan.gov/"
     senator_url = "https://senate.michigan.gov/senatorinfo_complete.html"
     req = requests.get(senator_url)
@@ -142,6 +143,7 @@ def get_image_from_other_house_link(name):
 
 
 def scrape_michigan_house():
+    print("scraping michigan house")
     req = requests.get("https://www.house.mi.gov/AllRepresentatives")
     soup = BeautifulSoup(req.content, 'html.parser')
 
@@ -268,8 +270,9 @@ def scrape_michigan_house():
             writer.writeheader()  # don't write row if this is after senate
         writer.writerows(data)
 
-
-
-if __name__ == '__main__':
+def run_michigan():
     scrape_michigan_senators()
     scrape_michigan_house()
+
+if __name__ == '__main__':
+    run_michigan()
