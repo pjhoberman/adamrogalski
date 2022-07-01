@@ -97,6 +97,12 @@ def scrape_michigan_senators():
         #     pass
         el = el.nextSibling
 
+    # hard coded cleanup
+    for contact in data:
+        if contact['name'] == "John Dr. Bizon":
+            contact['name'] = "Dr. John Bizon"
+            break
+
     # download images
     for record in data:
         fn = record.get("name").replace(' ', '-').replace('.', '').replace(',', '').lower()
@@ -172,6 +178,14 @@ def scrape_michigan_house():
                 contact['page_link'] = page_link
         data.append(contact)
 
+    # grab titles
+    res = requests.get("https://www.house.mi.gov/Leadership")
+    soup = BeautifulSoup(res.content, 'html.parser')
+    for h4 in soup.find_all("h4"):
+        for contact in data:
+            if contact['name'].strip() == h4.text.strip():
+                contact['title'] = h4.find_next_sibling('span').text.strip()
+
     print("Downloading images")
     for i, rep in enumerate(data):
         print(f"\t{i}/{len(data)}")
@@ -197,6 +211,7 @@ def scrape_michigan_house():
             if not os.path.isfile(f"michigan/house/{fn}{ext}"):
                 download_image("house", img_url, fn, extension=ext)
             rep["saved_image"] = f"michigan/house/{fn}{ext}"
+
 
         elif base == "housedems.com":
             res = requests.get(link)
@@ -240,7 +255,7 @@ def scrape_michigan_house():
             check = soup.find(class_="fusion-button-wrapper").nextSibling
             if "Committees" in check.text:
                 continue
-            rep["title"] = check.text
+            rep["title"] = check.text.strip()
 
         else:
             rep['saved_image'] = "None"

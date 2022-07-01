@@ -6,3 +6,6 @@ house/*
 *.zip
 .DS_Store
 *output*
+michigan/
+*.csv
+*.pdf

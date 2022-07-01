@@ -1,6 +1,7 @@
 import csv
 import re
 
+from PIL import Image
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
@@ -345,13 +346,36 @@ def draw(data_file="output.csv", output_file="output.pdf", state="Illinois"):
                             card_width + 12 + left_fill + right_fill, line_height*2, stroke=0, fill=1)
                 canvas.setFillColorRGB(0,0,0)
                 try:
+                    y = round(starting_coords[1] + .15*inch, 4)
                     if person.get("saved_image") == "error":
                         img = ImageReader("no-image.jpg")
                     else:
                         img = ImageReader(person.get("saved_image"))
+                        # test image size
+                        _width, _height = Image.open(person.get("saved_image")).size
+                        # print(person.get("name"), image_size)
+                        if _width > _height:
+                            print(person.get("name"))
+                            # get the downsizing of the width, apply to height, and move y up that much
+                            print(f"y before: {y}")
+                            print(f"image_height: {image_height}")
+                            print(f"this image: {(image_width / _width) * _height}")
+                            print(f"dff: {(image_height - (image_width / _width) * _height)}")
+                            print(f"expected top of og: {y + image_height}")
+                            print(f"expected top of new: {y +  (image_height - (image_width / _width) * _height) + ((image_width / _width) * _height)}")
+                            y += (image_height - (image_width / _width) * _height) / 4
+                            y = round(y, 4)
+                            print(f"y after: {y}")
+                            print(f"check your work: {y + (image_width / _width) * _height}")
+                            print("\n")
+
+                        # if this_image_height < image_height:
+                        #     y -= (image_height - this_image_height) / 2
+
+
                     canvas.drawImage(img,
                                      x=round(starting_coords[0] + .35 * inch, 4),
-                                     y=round(starting_coords[1] + .15*inch, 4),
+                                     y=y,
                                      height=image_height,
                                      width=image_width,
                                      preserveAspectRatio=True)
