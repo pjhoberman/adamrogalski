@@ -1,4 +1,5 @@
 import shutil
+from pathlib import Path
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
 import csv
@@ -22,9 +23,9 @@ CONTACT = {
 
 
 def download_image(side, url, fn, extension=".jpg"):
-    directory = f"michigan/{side}"
+    directory = Path(f"michigan/{side}")
     os.makedirs(directory, exist_ok=True)
-    dest = f"{directory}/{fn}{extension}"
+    dest = directory / f"{fn}{extension}"
     urlretrieve(url, dest)
 
     # downsize images
@@ -107,11 +108,12 @@ def scrape_michigan_senators():
     # download images
     for record in data:
         fn = record.get("name").replace(' ', '-').replace('.', '').replace(',', '').lower()
-        if not os.path.isfile(f"michigan/senate/{fn}.jpg"):
+        destination = Path(f"michigan/senate/{fn}.jpg")
+        if not destination.is_file():
             download_image("senate",
                            record.get("image_url"),
                            fn)
-        record["saved_image"] = f"michigan/senate/{fn}.jpg"
+        record["saved_image"] = destination
 
     write_header = not os.path.isfile("michigan.csv")
     with open("michigan.csv", "a") as file:
@@ -160,7 +162,11 @@ def scrape_michigan_house():
             row1, row2 = rep.find_all(class_="row")
         except ValueError:
             continue  # skip empty ones
-        name, party, district = re.fullmatch(r"(.*) \((\w).*\) District-(\d+)", row1.text.strip()).groups()
+        try:
+            name, party, district = re.fullmatch(r"(.*) \((\w).*\) District-(\d+)", row1.text.strip()).groups()
+        except AttributeError:
+            print(row1.text.strip())
+            continue
         ln, fn = name.split(",")
         name = f"{fn.strip()} {ln.strip()}"
         contact['party'] = party
@@ -210,10 +216,10 @@ def scrape_michigan_house():
             rep['image_url'] = img_url
             fn = rep.get("name").replace(' ', '-').replace('.', '').replace(',', '').lower()
             _, ext = os.path.splitext(img_url)
-            if not os.path.isfile(f"michigan/house/{fn}{ext}"):
+            destination = Path(f"michigan/house/{fn}{ext}")
+            if not destination.is_file():
                 download_image("house", img_url, fn, extension=ext)
-            rep["saved_image"] = f"michigan/house/{fn}{ext}"
-
+            rep["saved_image"] = destination
 
         elif base == "housedems.com":
             res = requests.get(link)
@@ -249,9 +255,10 @@ def scrape_michigan_house():
                 continue
             rep['image_url'] = img_url
             fn = rep.get("name").replace(' ', '-').replace('.', '').replace(',', '').lower()
-            if not os.path.isfile(f"michigan/house/{fn}.jpg"):
+            destination = Path(f"michigan/house/{fn}.jpg")
+            if not destination.is_file():
                 download_image("house", img_url, fn)
-            rep["saved_image"] = f"michigan/house/{fn}.jpg"
+            rep["saved_image"] = destination
 
             # check for title
             check = soup.find(class_="fusion-button-wrapper").nextSibling
