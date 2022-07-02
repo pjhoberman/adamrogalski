@@ -1,5 +1,6 @@
 import csv
 import re
+from pathlib import Path
 
 from PIL import Image
 from reportlab.lib.pagesizes import LETTER
@@ -350,9 +351,9 @@ def draw(data_file="output.csv", output_file="output.pdf", state="Illinois"):
                     if person.get("saved_image") == "error":
                         img = ImageReader("no-image.jpg")
                     else:
-                        img = ImageReader(person.get("saved_image"))
+                        img = ImageReader(Path(person.get("saved_image")))
                         # test image size
-                        _width, _height = Image.open(person.get("saved_image")).size
+                        _width, _height = Image.open(Path(person.get("saved_image"))).size
                         # print(person.get("name"), image_size)
                         if _width > _height:
                             # print(person.get("name"))

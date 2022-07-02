@@ -2,6 +2,7 @@ import csv
 import os
 import shutil
 import urllib.request
+from pathlib import Path
 from urllib.error import HTTPError
 
 from PIL import Image
@@ -9,12 +10,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver import Keys
 
 
-
-
-def get_data(url, side):
+def get_data(url, side, driver):
     print(f"getting data for {side}")
     driver.get(url)
     spans = driver.find_elements(By.XPATH, "//table//span")
@@ -58,30 +56,35 @@ def get_data(url, side):
 
 # os.makedirs("house", exist_ok=True)
 
-def get_images(side, data):
+def get_images(side, data, driver):
     print(f"downloading images for {side}")
-    os.makedirs(f"illinois/{side}", exist_ok=True)
+    image_dir = Path(f"illinois/{side}")
+    if not image_dir.exists():
+        image_dir.mkdir(parents=True)
+    # os.makedirs(f"illinois/{side}", exist_ok=True)
     for record in data:
         driver.get(record['page_link'])
         src = driver.find_element(By.CSS_SELECTOR, '[alt*="Photograph"]').get_attribute("src")
         fn = record.get('name').replace(' ', '-').replace('.', '').replace(',', '').lower()
+        destination_fn = image_dir/f"{fn}.jpg"
         try:
-            urllib.request.urlretrieve(src, f"illinois/{side}/{fn}.jpg")
+            urllib.request.urlretrieve(src, destination_fn)
             record['image_url'] = src
-            record['saved_image'] = f"illinois/{side}/{fn}.jpg"
+            record['saved_image'] = destination_fn
 
             # downsize images
-            if os.stat(f"illinois/{side}/{fn}.jpg").st_size / 1000 > 300:  # over 300k
-                size = os.stat(f"illinois/{side}/{fn}.jpg").st_size / 1000
-                shutil.copyfile(f"illinois/{side}/{fn}.jpg", f"illinois/{side}/{fn}.original.jpg")
-                img = Image.open(f"illinois/{side}/{fn}.jpg")
+            if os.stat(destination_fn).st_size / 1000 > 300:  # over 300k
+                size = os.stat(destination_fn).st_size / 1000
+                # shutil.copyfile(f"illinois/{side}/{fn}.jpg", f"illinois/{side}/{fn}.original.jpg")
+                img = Image.open(destination_fn)
+                quality = 100
                 if size > 1000:
                     quality = 33
                 elif size > 500:
                     quality = 50
                 elif size > 300:
                     quality = 75
-                img.save(f"illinois/{side}/{fn}.jpg", quality=quality)
+                img.save(destination_fn, quality=quality)
 
         except HTTPError:
             record['image_url'] = src
@@ -100,7 +103,7 @@ def get_images(side, data):
 def write_data(datasets: list, fn="output.csv") -> None:
     print(f"writing data to {fn}")
     with open(fn, "w") as f:
-        writer = csv.DictWriter(f, fieldnames=senate_data[0].keys())
+        writer = csv.DictWriter(f, fieldnames=datasets[0][0].keys())
         writer.writeheader()
         for data in datasets:
             for row in data:
@@ -113,11 +116,11 @@ def run_illinois():
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
-    house_data = get_data(house, "House")
-    senate_data = get_data(senate, "Senate")
+    house_data = get_data(house, "House", driver)
+    senate_data = get_data(senate, "Senate", driver)
 
-    get_images("house", house_data)
-    get_images("senate", senate_data)
+    get_images("house", house_data, driver)
+    get_images("senate", senate_data, driver)
 
     write_data([house_data, senate_data], fn="illinois_data.csv")
     driver.quit()
